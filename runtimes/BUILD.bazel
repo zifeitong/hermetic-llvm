@@ -1,6 +1,5 @@
 load("@bazel_lib//:bzl_library.bzl", "bzl_library")
 load("@bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
-load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_setting")
 load("@llvm-project//:vars.bzl", "LLVM_VERSION_MAJOR")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
@@ -43,14 +42,6 @@ config_setting(
         "collect_code_coverage": "true",
     },
     visibility = ["//visibility:public"],
-)
-
-selects.config_setting_group(
-    name = "profile_runtime_enabled",
-    match_any = [
-        ":coverage_enabled",
-        "//config:profile_enabled",
-    ],
 )
 
 filegroup(
@@ -243,11 +234,8 @@ resource_directory(
             "//runtimes/compiler-rt:clang_rt.fuzzer_interceptors.static": "libclang_rt.fuzzer_interceptors",
         },
         "//conditions:default": {},
-    }) | select({
-        ":profile_runtime_enabled": {
-            "//runtimes/compiler-rt:clang_rt.profile.static": "libclang_rt.profile",
-        },
-        "//conditions:default": {},
+    }) | ({
+        "//runtimes/compiler-rt:clang_rt.profile.static": "libclang_rt.profile",
     }) | select({
         "//config:ubsan_enabled": {
             "//runtimes/compiler-rt:clang_rt.ubsan_standalone.static": "libclang_rt.ubsan_standalone",
@@ -365,11 +353,8 @@ resource_directory(
             "//runtimes/compiler-rt:clang_rt.tsan.shared": "libclang_rt.tsan_osx_dynamic",
         },
         "//conditions:default": {},
-    }) | select({
-        ":profile_runtime_enabled": {
-            "//runtimes/compiler-rt:clang_rt.profile.static": "libclang_rt.profile_osx",
-        },
-        "//conditions:default": {},
+    }) | ({
+        "//runtimes/compiler-rt:clang_rt.profile.static": "libclang_rt.profile_osx",
     }) | select({
         "//config:fuzzer_enabled": {
             "//runtimes/compiler-rt:clang_rt.fuzzer.static": "libclang_rt.fuzzer_osx",

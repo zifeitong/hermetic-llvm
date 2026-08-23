@@ -249,6 +249,14 @@ profile_cc_binary, _profile_cc_binary_internal = with_cfg(cc_binary).set(
     }),
 ).build()
 
+# Exercises the fdo_instrument crosstool feature rather than //config:profile.
+# The value is where -fprofile-generate= writes; the test overrides it via
+# LLVM_PROFILE_FILE.
+fdo_instrument_cc_binary, _fdo_instrument_cc_binary_internal = with_cfg(cc_binary).set(
+    "fdo_instrument",
+    ".",
+).build()
+
 opt_binary, _opt_binary_internal = with_cfg(cc_binary).set(
     "compilation_mode",
     "opt",
