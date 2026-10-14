@@ -1,10 +1,12 @@
 load("@bazel_lib//:bzl_library.bzl", "bzl_library")
 load("@bazel_lib//lib:copy_to_directory.bzl", "copy_to_directory")
-load("@bazel_skylib//rules:common_settings.bzl", "string_setting")
+load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_setting", "string_setting")
 load("@llvm-project//:vars.bzl", "LLVM_VERSION_MAJOR")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("//toolchain/args:llvm_target_triple.bzl", "LLVM_TARGET_TRIPLE")
 load("//toolchain/runtimes:cc_stage0_object.bzl", "cc_stage0_object")
+load(":fdo_instrument_flag.bzl", "fdo_instrument_flag")
 load(":resource_directory.bzl", "resource_directory")
 
 exports_files(["module_map.BUILD.bazel"])
@@ -42,6 +44,29 @@ config_setting(
         "collect_code_coverage": "true",
     },
     visibility = ["//visibility:public"],
+)
+
+bool_setting(
+    name = "fdo_instrument_requested",
+    build_setting_default = False,
+)
+
+fdo_instrument_flag(name = "fdo_instrument")
+
+config_setting(
+    name = "fdo_instrument_enabled",
+    flag_values = {
+        ":fdo_instrument": "true",
+    },
+)
+
+selects.config_setting_group(
+    name = "profile_runtime_enabled",
+    match_any = [
+        ":coverage_enabled",
+        ":fdo_instrument_enabled",
+        "//config:profile_enabled",
+    ],
 )
 
 filegroup(
@@ -234,8 +259,11 @@ resource_directory(
             "//runtimes/compiler-rt:clang_rt.fuzzer_interceptors.static": "libclang_rt.fuzzer_interceptors",
         },
         "//conditions:default": {},
-    }) | ({
-        "//runtimes/compiler-rt:clang_rt.profile.static": "libclang_rt.profile",
+    }) | select({
+        ":profile_runtime_enabled": {
+            "//runtimes/compiler-rt:clang_rt.profile.static": "libclang_rt.profile",
+        },
+        "//conditions:default": {},
     }) | select({
         "//config:ubsan_enabled": {
             "//runtimes/compiler-rt:clang_rt.ubsan_standalone.static": "libclang_rt.ubsan_standalone",
@@ -353,8 +381,11 @@ resource_directory(
             "//runtimes/compiler-rt:clang_rt.tsan.shared": "libclang_rt.tsan_osx_dynamic",
         },
         "//conditions:default": {},
-    }) | ({
-        "//runtimes/compiler-rt:clang_rt.profile.static": "libclang_rt.profile_osx",
+    }) | select({
+        ":profile_runtime_enabled": {
+            "//runtimes/compiler-rt:clang_rt.profile.static": "libclang_rt.profile_osx",
+        },
+        "//conditions:default": {},
     }) | select({
         "//config:fuzzer_enabled": {
             "//runtimes/compiler-rt:clang_rt.fuzzer.static": "libclang_rt.fuzzer_osx",
@@ -375,6 +406,13 @@ alias(
         "//conditions:default": ":resource_directory_default",
     }),
     visibility = ["//visibility:public"],
+)
+
+bzl_library(
+    name = "fdo_instrument_flag",
+    srcs = ["fdo_instrument_flag.bzl"],
+    visibility = ["//visibility:public"],
+    deps = ["@bazel_skylib//rules:common_settings"],
 )
 
 # The runtime alias already owns the file-stem name Gazelle would generate.
