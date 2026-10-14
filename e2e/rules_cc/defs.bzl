@@ -257,6 +257,16 @@ fdo_instrument_cc_binary, _fdo_instrument_cc_binary_internal = with_cfg(cc_binar
     ".",
 ).build()
 
+# As fdo_instrument_cc_binary, but context-sensitive (post-inline) instrumentation.
+# That runs in the optimization pipeline, so -O0 emits no counters at all.
+cs_fdo_instrument_cc_binary, _cs_fdo_instrument_cc_binary_internal = with_cfg(cc_binary).set(
+    "cs_fdo_instrument",
+    ".",
+).set(
+    "compilation_mode",
+    "opt",
+).build()
+
 opt_binary, _opt_binary_internal = with_cfg(cc_binary).set(
     "compilation_mode",
     "opt",

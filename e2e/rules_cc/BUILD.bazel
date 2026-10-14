@@ -17,6 +17,7 @@ load(
     "asan_cc_binary",
     "asan_cc_test",
     "cfi_cc_binary",
+    "cs_fdo_instrument_cc_binary",
     "dfsan_cc_binary",
     "external_include_paths_glibc_alias",
     "external_include_paths_glibc_headers_test",
@@ -1422,6 +1423,36 @@ sh_test(
     data = [":fdo_instrument_main"],
     env = {
         "BINARY": "$(rootpath :fdo_instrument_main)",
+    },
+    env_inherit = ["PATH"],
+    exec_compatible_with = HOST_CONSTRAINTS,
+    tags = ["no-remote"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+# As :fdo_instrument_output_test, but via --cs_fdo_instrument.
+cs_fdo_instrument_cc_binary(
+    name = "cs_fdo_instrument_main",
+    srcs = ["profile_main.cc"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+sh_test(
+    name = "cs_fdo_instrument_output_test",
+    srcs = ["profile_output_test.sh"],
+    data = [":cs_fdo_instrument_main"],
+    env = {
+        "BINARY": "$(rootpath :cs_fdo_instrument_main)",
     },
     env_inherit = ["PATH"],
     exec_compatible_with = HOST_CONSTRAINTS,
